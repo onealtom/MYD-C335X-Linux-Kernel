@@ -82,7 +82,7 @@
 /* LCD backlight platform Data */
 #define AM335X_BACKLIGHT_MAX_BRIGHTNESS        100
 #define AM335X_BACKLIGHT_DEFAULT_BRIGHTNESS    80
-#define AM335X_PWM_PERIOD_NANO_SECONDS        (1000000 * 5)
+#define AM335X_PWM_PERIOD_NANO_SECONDS        (1000 * 50)/* increase to 20KHz */
 
 static struct platform_pwm_backlight_data am335x_backlight_data = {
 	.pwm_id         = "ehrpwm.0:0",
@@ -104,10 +104,10 @@ __setup("dispmode=", lcd_type_init);
 static char* display_mode = "hdmi480p";
 module_param(display_mode, charp, S_IRUGO);
 
-#define NUM_OF_LCDMODE 9
-         enum  display_num{  lcd4i3  ,  lcd7i  ,  vga  ,  lvds  ,  hdmi640x480  ,
+#define NUM_OF_LCDMODE 11
+enum  display_num{  lcd4i3  , lcd7i , lcd7ir  , lcd7ic,  vga  ,  lvds  ,  hdmi640x480  ,
                              hdmi480p   ,  hdmi1024x768  ,  hdmi720p  ,  hdmi1080i  };
-const char *display_num[]={ "lcd4i3" , "lcd7i" , "vga" , "lvds" , "hdmi640x480" ,
+const char *display_num[]={ "lcd4i3" , "lcd7i" , "lcd7ir" , "lcd7ic", "vga" , "lvds" , "hdmi640x480" ,
                             "hdmi480p"  , "hdmi1024x768" , "hdmi720p" , "hdmi1080i" };
 
 static const struct display_panel disp_panel = {
@@ -165,9 +165,17 @@ struct da8xx_lcdc_platform_data	am335x_lcdc_pdata[] = {
 		.controller_data	= &lcd_cfg,
 		.type			= "4.3inch_LCD",	
 	},{
+                .manu_name              = "InnoLux",
+                .controller_data        = &lcd_cfg,
+                .type                   = "7inch_LCD_RES",
+	},{
 		.manu_name		= "InnoLux",
 		.controller_data	= &lcd_cfg,
-		.type			= "7inch_LCD",
+		.type			= "7inch_LCD_RES",
+	},{
+                .manu_name              = "InnoLux",
+                .controller_data        = &lcd_cfg,
+                .type                   = "7inch_LCD_CAP",		
 	},{
 	        .manu_name		= "InnoLux",
         	.controller_data	= &lcd_cfg,
@@ -652,6 +660,7 @@ static struct platform_device am335x_backlight = {
 static struct pwmss_platform_data  pwm_pdata[3] = {
 	{
 		.version = PWM_VERSION_1,
+/*		.chan_attrib[0].inverse_pol = 1,// for pwm backlight ctrl */
 	},{
 		.version = PWM_VERSION_1,
 	},{
@@ -700,6 +709,7 @@ static void display_init(int evm_id, int profile)
 	int i;
 	for(i=0; i<NUM_OF_LCDMODE; i++){
 		if( strcmp(display_mode ,display_num[i])==0){
+			printk(KERN_ERR"--- display_mode: %s\n", display_mode);
 			break;
 		}
 	}
@@ -719,6 +729,8 @@ static void display_init(int evm_id, int profile)
 			break;
 		case lcd4i3:
 		case lcd7i:
+		case lcd7ir:
+		case lcd7ic:
 		case vga:
 		case lvds:
 		default:
@@ -733,6 +745,8 @@ static void display_init(int evm_id, int profile)
 	{
 		case lcd4i3:
 		case lcd7i:
+		case lcd7ir:
+		case lcd7ic:
 		case hdmi640x480:
 		case hdmi720p:	
 			myd_am335x_def_pdata=&am335x_lcdc_pdata[i];

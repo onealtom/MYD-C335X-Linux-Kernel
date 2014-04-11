@@ -244,8 +244,8 @@ static struct da8xx_panel known_lcd_panels[] = {
                 .pxl_clk = 9600000,
                 .invert_pxl_clk = 0,
         },
-        [1] = {
-                .name = "7inch_LCD",
+        [1] = { /* Resistive touch screen */
+                .name = "7inch_LCD_RES",
                 .width = 800,
                 .height = 480,
                 .hfp = 1,
@@ -257,7 +257,20 @@ static struct da8xx_panel known_lcd_panels[] = {
                 .pxl_clk = 36000000,
                 .invert_pxl_clk = 0,
         },
-        [2] = {
+        [2] = {/* Capacitive touch screen */
+                .name = "7inch_LCD_CAP",
+                .width = 800,
+                .height = 480,
+                .hfp = 210,
+                .hbp = 1,
+                .hsw = 20,
+                .vfp = 22,
+                .vbp = 1,
+                .vsw = 10,
+                .pxl_clk = 36000000,
+                .invert_pxl_clk = 0,
+        },
+        [3] = {
                 .name = "VGA",
                 .width = 1024,
                 .height = 768,
@@ -270,7 +283,7 @@ static struct da8xx_panel known_lcd_panels[] = {
                 .pxl_clk = 72000000,
                 .invert_pxl_clk = 0,
         },
-        [3] = {
+        [4] = {
                 .name = "LVDS",
                 .width = 800,
                 .height = 600,
@@ -284,7 +297,7 @@ static struct da8xx_panel known_lcd_panels[] = {
                 .invert_pxl_clk = 0,
         },
 	/* Newhaven Display */
-	[4] = {
+	[5] = {
 		.name = "NHD-4.3-ATXI#-T-1",
 		.width = 480,
 		.height = 272,
@@ -297,7 +310,7 @@ static struct da8xx_panel known_lcd_panels[] = {
 		.pxl_clk = 9000000,
 		.invert_pxl_clk = 0,
 	},
-	[5] = {
+	[6] = {
 		 /* CDTech S035Q01 */
 		.name = "CDTech_S035Q01",
 		.width = 320,
@@ -311,7 +324,7 @@ static struct da8xx_panel known_lcd_panels[] = {
 		.pxl_clk = 8000000,
 		.invert_pxl_clk = 0,
 	},
-        [6] = {
+        [7] = {
                  /* 720 x 480 @ 60 Hz  Reduced blanking VESA CVT 0.79M3-R */
                 .name = "nxp-720x480@60",
                 .width = 720,
@@ -325,7 +338,7 @@ static struct da8xx_panel known_lcd_panels[] = {
                 .pxl_clk = 27027000,
                 .invert_pxl_clk = 0,
         },
-	[7] = {
+	[8] = {
 		 /* 1280 x 720 @ 60 Hz  Reduced blanking VESA CVT 0.79M3-R */
 		.name = "nxp-1280x720@60",		//1440x900
 		.width = 1280,
@@ -339,7 +352,7 @@ static struct da8xx_panel known_lcd_panels[] = {
 		.pxl_clk = 74250000,
 		.invert_pxl_clk = 0,
 	},
-	[8] = {
+	[9] = {
 		 /* 640 x 480 @ 60 Hz  Reduced blanking VESA CVT 0.79M3-R */
 		.name = "nxp-640x480@60",
 		.width = 640,
@@ -353,7 +366,7 @@ static struct da8xx_panel known_lcd_panels[] = {
 		.pxl_clk = 25200000,
 		.invert_pxl_clk = 0,
 	},
-	[9] = {
+	[10] = {
 		 /* 1920 x 1080 @ 60 Hz  Reduced blanking VESA CVT 0.79M3-R */
 		.name = "nxp-1920x1080@24",
 		.width = 1920,
