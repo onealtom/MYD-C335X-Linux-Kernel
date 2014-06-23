@@ -144,6 +144,7 @@ __init omap_nand_init(struct mtd_partition *nand_parts, u8 nr_parts, u8 cs,
 	omap_nand_data.nr_parts		= nr_parts;
 	omap_nand_data.devsize		= nand_type;
 	omap_nand_data.gpmc_t		= gpmc_t;
+	omap_nand_data.dev_ready        = true;/* Use RDY/BSY pin instead of polling in nandflash driver. Added by MYIR */
 
 	return &omap_nand_data;
 }
