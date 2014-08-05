@@ -1087,35 +1087,33 @@ static inline void omap_hsmmc_dbg_report_irq(struct omap_hsmmc_host *host,
  *  SRC or SRD bit of SYSCTL register
  * Can be called from interrupt context
  */
+/* Modified by MYIR, to prevent too long waiting in ISR */
 static inline void omap_hsmmc_reset_controller_fsm(struct omap_hsmmc_host *host,
-						   unsigned long bit)
+                           unsigned long bit)
 {
-	unsigned long i = 0;
-	unsigned long limit = (loops_per_jiffy *
-				msecs_to_jiffies(MMC_TIMEOUT_MS));
+    /*change to 1ms,so we can use udelay(1)*/
+    unsigned long limit = MMC_TIMEOUT_MS * 1000;
 
-	OMAP_HSMMC_WRITE(host->base, SYSCTL,
-			 OMAP_HSMMC_READ(host->base, SYSCTL) | bit);
+    OMAP_HSMMC_WRITE(host->base, SYSCTL,
+             OMAP_HSMMC_READ(host->base, SYSCTL) | bit);
 
-	/*
-	 * OMAP4 ES2 and greater has an updated reset logic.
-	 * Monitor a 0->1 transition first
-	 */
-	if (mmc_slot(host).features & HSMMC_HAS_UPDATED_RESET) {
-		while ((!(OMAP_HSMMC_READ(host->base, SYSCTL) & bit))
-					&& (i++ < limit))
-			cpu_relax();
-	}
-	i = 0;
+    /*
+     * OMAP4 ES2 and greater has an updated reset logic.
+     * Monitor a 0->1 transition first
+     */
+    if (mmc_slot(host).features & HSMMC_HAS_UPDATED_RESET)
+        while (!(OMAP_HSMMC_READ(host->base, SYSCTL) & bit)
+            && limit--)
+            udelay(1);
 
-	while ((OMAP_HSMMC_READ(host->base, SYSCTL) & bit) &&
-		(i++ < limit))
-		cpu_relax();
+    limit = MMC_TIMEOUT_MS * 1000;
+    while ((OMAP_HSMMC_READ(host->base, SYSCTL) & bit) && limit--)
+        udelay(1);
 
-	if (OMAP_HSMMC_READ(host->base, SYSCTL) & bit)
-		dev_err(mmc_dev(host->mmc),
-			"Timeout waiting on controller reset in %s\n",
-			__func__);
+    if (OMAP_HSMMC_READ(host->base, SYSCTL) & bit)
+        dev_err(mmc_dev(host->mmc),
+            "Timeout waiting on controller reset in %s\n",
+            __func__);
 }
 
 static void omap_hsmmc_do_irq(struct omap_hsmmc_host *host, int status, int irq)
