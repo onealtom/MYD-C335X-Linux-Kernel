@@ -890,12 +890,22 @@ static void evm_nand_init(int evm_id, int profile)
 	omap_init_elm();
 }
 
+static struct ft5x0x_ts_platform_data ts_plat_data = {
+	.irq            = -1,
+	.polling_mode   = 1,
+	.multi_touch    = 0,
+};
+
 static struct i2c_board_info am335x_i2c1_boardinfo[] = {
 	{
 		I2C_BOARD_INFO("sgtl5000", 0x0A),
 	},
 	{
 		I2C_BOARD_INFO("tda998x", 0x70),
+	},
+	{
+		I2C_BOARD_INFO("ft5x06_ts", 0x38),
+		.platform_data = &ts_plat_data,
 	},
 };
 
