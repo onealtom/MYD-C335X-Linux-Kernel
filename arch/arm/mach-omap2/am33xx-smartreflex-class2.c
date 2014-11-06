@@ -787,7 +787,7 @@ static int __init am33xx_sr_probe(struct platform_device *pdev)
 	sr_info->uvoltage_step_size = pdata->vstep_size_uv;
 	sr_info->autocomp_active = false;
         sr_info->disabled_by_user = false;
-        	
+
 	for (i = 0; i < sr_info->no_of_sens; i++) {
                 u32 curr_freq=0;
 
@@ -822,13 +822,15 @@ static int __init am33xx_sr_probe(struct platform_device *pdev)
                 if (i == SR_MPU) {
                         /* hardcoded CPU NR */
                         curr_freq = cpufreq_get(0); 
-                                
+
                         /* update current OPP */
                         sr_info->sen[i].curr_opp = get_current_opp(sr_info, i, 
                                         curr_freq*1000);
+
                         if (sr_info->sen[i].curr_opp == -EINVAL) {
+/* Commented by MYIR, kernel crash if sr_info->pdev = NULL 
                                 dev_err(&sr_info->pdev->dev, 
-                                        "%s: cannot determine opp\n",__func__);
+                                        "%s: cannot determine opp\n",__func__); */
                                 ret = -EINVAL;
                                 goto err_free_sr_info;
                         }
@@ -926,7 +928,7 @@ static int __init am33xx_sr_probe(struct platform_device *pdev)
                         __func__, i, sr_info->sen[i].init_volt_mv);
 	} /* for() */
 
-        /* set_voltage() will be used as the bottom half IRQ handler */
+    /* set_voltage() will be used as the bottom half IRQ handler */
 	INIT_DELAYED_WORK(&sr_info->work, set_voltage);
 
 #ifdef CONFIG_CPU_FREQ
@@ -942,7 +944,6 @@ static int __init am33xx_sr_probe(struct platform_device *pdev)
 	if (ret)
 		dev_warn(&pdev->dev, "%s: Debugfs entries are not created\n",
 						__func__);
-
 	platform_set_drvdata(pdev, sr_info);
 
 	dev_info(&pdev->dev, "%s: Driver initialized\n", __func__);

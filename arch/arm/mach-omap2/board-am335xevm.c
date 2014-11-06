@@ -923,16 +923,12 @@ static void mcasp0_init(int evm_id, int profile)
 
 static void uart1_init(int evm_id, int profile)
 {
-        printk("--------uart1_init\n");
-
         /* Configure Uart1*/
         setup_pin_mux(uart1_pin_mux);
 }
 
 static void uart2_init(int evm_id, int profile)
 {
-        printk("--------uart2_init\n");
-
         /* Configure Uart2*/
         setup_pin_mux(uart2_pin_mux);
         return;
@@ -940,8 +936,6 @@ static void uart2_init(int evm_id, int profile)
 
 static void uart3_init(int evm_id, int profile)
 {
-        printk("--------uart3_init\n");
-
         /* Configure Uart3*/
         setup_pin_mux(uart3_pin_mux);
         return;
@@ -949,8 +943,6 @@ static void uart3_init(int evm_id, int profile)
 
 static void uart4_init(int evm_id, int profile)
 {
-        printk("--------uart4_init\n");
-
         /* Configure Uart4*/
         setup_pin_mux(uart4_pin_mux);
         return;
@@ -1111,64 +1103,196 @@ static void am335x_evm_setup(void)
 	return;
 }
 
-static struct regulator_init_data am335x_dummy = {
-	.constraints.always_on	= true,
-};
+/*
+ * TPS65217 voltage regulator support
+ * Please note that TPS65217 is not present on MYD-AM335X, the cpu frequency
+ * will be set to its max value in SPL code.
+ */
 
-static struct regulator_consumer_supply am335x_vdd1_supply[] = {
-	REGULATOR_SUPPLY("vdd_mpu", NULL),
-};
-
-static struct regulator_init_data am335x_vdd1 = {
-	.constraints = {
-		.min_uV			= 600000,
-		.max_uV			= 1500000,
-		.valid_modes_mask	= REGULATOR_MODE_NORMAL,
-		.valid_ops_mask		= REGULATOR_CHANGE_VOLTAGE,
-		.always_on		= 1,
+/* 1.5V */
+static struct regulator_consumer_supply tps65217_dcdc1_consumers[] = {
+	{
+		.supply = "vdds_ddr",
 	},
-	.num_consumer_supplies	= ARRAY_SIZE(am335x_vdd1_supply),
-	.consumer_supplies	= am335x_vdd1_supply,
-	.ignore_check_consumers = 1,
-};
-
-static struct regulator_consumer_supply am335x_vdd2_supply[] = {
-	REGULATOR_SUPPLY("vdd_core", NULL),
-};
-
-static struct regulator_init_data am335x_vdd2 = {
-	.constraints = {
-		.min_uV			= 600000,
-		.max_uV			= 1500000,
-		.valid_modes_mask	= REGULATOR_MODE_NORMAL,
-		.valid_ops_mask		= REGULATOR_CHANGE_VOLTAGE,
-		.always_on		= 1,
+	{
+		.supply = "ddr3",
 	},
-	.num_consumer_supplies	= ARRAY_SIZE(am335x_vdd2_supply),
-	.consumer_supplies	= am335x_vdd2_supply,
-	.ignore_check_consumers = 1,
 };
 
-static struct tps65910_board am335x_tps65910_info = {
-	.tps65910_pmic_init_data[TPS65910_REG_VRTC]	= &am335x_dummy,
-	.tps65910_pmic_init_data[TPS65910_REG_VIO]	= &am335x_dummy,
-	.tps65910_pmic_init_data[TPS65910_REG_VDD1]	= &am335x_vdd1,
-	.tps65910_pmic_init_data[TPS65910_REG_VDD2]	= &am335x_vdd2,
-	.tps65910_pmic_init_data[TPS65910_REG_VDD3]	= &am335x_dummy,
-	.tps65910_pmic_init_data[TPS65910_REG_VDIG1]	= &am335x_dummy,
-	.tps65910_pmic_init_data[TPS65910_REG_VDIG2]	= &am335x_dummy,
-	.tps65910_pmic_init_data[TPS65910_REG_VPLL]	= &am335x_dummy,
-	.tps65910_pmic_init_data[TPS65910_REG_VDAC]	= &am335x_dummy,
-	.tps65910_pmic_init_data[TPS65910_REG_VAUX1]	= &am335x_dummy,
-	.tps65910_pmic_init_data[TPS65910_REG_VAUX2]	= &am335x_dummy,
-	.tps65910_pmic_init_data[TPS65910_REG_VAUX33]	= &am335x_dummy,
-	.tps65910_pmic_init_data[TPS65910_REG_VMMC]	= &am335x_dummy,
+/* 1.1V */
+static struct regulator_consumer_supply tps65217_dcdc2_consumers[] = {
+	{
+		.supply = "vdd_mpu",
+	},
+};
+
+/* 1.1V */
+static struct regulator_consumer_supply tps65217_dcdc3_consumers[] = {
+	{
+		.supply = "vdd_core",
+	},
+};
+
+/* 1.8V LDO */
+static struct regulator_consumer_supply tps65217_ldo1_consumers[] = {
+	{
+		.supply = "vdds_rtc",
+	},
+};
+
+/* 3.3V LDO */
+static struct regulator_consumer_supply tps65217_ldo2_consumers[] = {
+	{
+		.supply = "vdds_any_pn",
+	},
+};
+
+/* 1.8V LDO */
+static struct regulator_consumer_supply tps65217_ldo3_consumers[] = {
+	{
+		.supply = "vdds_osc",
+	},
+	{
+		.supply = "vdds_pll_ddr",
+	},
+	{
+		.supply = "vdda_usb0_1p8v",
+	},
+	{
+		.supply = "vdds_sram_core_bg",
+	},
+	{
+		.supply = "vdds_sram_mpu_bb",
+	},
+	{
+		.supply = "vdds_pll_mpu",
+	},
+	{
+		.supply = "vdda_adc",
+	},
+	{
+		.supply = "vdds",
+	},
+	{
+		.supply = "vdds_hvx_1p8v",
+	},
+	{
+		.supply = "vdds_pll_core_lcd",
+	},
+};
+
+/* 3.3V LDO */
+static struct regulator_consumer_supply tps65217_ldo4_consumers[] = {
+	{
+		.supply = "vdds_hvx_ldo4_3p3v",
+	},
+};
+
+static struct regulator_init_data tps65217_regulator_data[] = {
+	/* dcdc1 */
+	{
+		.constraints = {
+			.min_uV = 900000,
+			.max_uV = 1800000,
+			.boot_on = 1,
+			.always_on = 1,
+		},
+		.num_consumer_supplies = ARRAY_SIZE(tps65217_dcdc1_consumers),
+		.consumer_supplies = tps65217_dcdc1_consumers,
+	},
+
+	/* dcdc2 */
+	{
+		.constraints = {
+			.min_uV = 900000,
+			.max_uV = 3300000,
+			.valid_ops_mask = (REGULATOR_CHANGE_VOLTAGE |
+				REGULATOR_CHANGE_STATUS),
+			.boot_on = 1,
+			.always_on = 1,
+		},
+		.num_consumer_supplies = ARRAY_SIZE(tps65217_dcdc2_consumers),
+		.consumer_supplies = tps65217_dcdc2_consumers,
+	},
+
+	/* dcdc3 */
+	{
+		.constraints = {
+			.min_uV = 900000,
+			.max_uV = 1500000,
+			.valid_ops_mask = (REGULATOR_CHANGE_VOLTAGE |
+				REGULATOR_CHANGE_STATUS),
+			.boot_on = 1,
+			.always_on = 1,
+		},
+		.num_consumer_supplies = ARRAY_SIZE(tps65217_dcdc3_consumers),
+		.consumer_supplies = tps65217_dcdc3_consumers,
+	},
+
+	/* ldo1 */
+	{
+		.constraints = {
+			.min_uV = 1000000,
+			.max_uV = 3300000,
+//			.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+			.boot_on = 1,
+			.always_on = 1,
+		},
+		.num_consumer_supplies = ARRAY_SIZE(tps65217_ldo1_consumers),
+		.consumer_supplies = tps65217_ldo1_consumers,
+	},
+
+	/* ldo2 */
+	{
+		.constraints = {
+			.min_uV = 900000,
+			.max_uV = 3300000,
+//			.valid_ops_mask = (REGULATOR_CHANGE_VOLTAGE |
+//				REGULATOR_CHANGE_STATUS),
+			.boot_on = 1,
+			.always_on = 1,
+		},
+		.num_consumer_supplies = ARRAY_SIZE(tps65217_ldo2_consumers),
+		.consumer_supplies = tps65217_ldo2_consumers,
+	},
+
+	/* ldo3 */
+	{
+		.constraints = {
+			.min_uV = 1800000,
+			.max_uV = 3300000,
+//			.valid_ops_mask = (REGULATOR_CHANGE_VOLTAGE |
+//				REGULATOR_CHANGE_STATUS),
+			.boot_on = 1,
+			.always_on = 1,
+		},
+		.num_consumer_supplies = ARRAY_SIZE(tps65217_ldo3_consumers),
+		.consumer_supplies = tps65217_ldo3_consumers,
+	},
+
+	/* ldo4 */
+	{
+		.constraints = {
+			.min_uV = 1800000,
+			.max_uV = 3300000,
+//			.valid_ops_mask = (REGULATOR_CHANGE_VOLTAGE |
+//				REGULATOR_CHANGE_STATUS),
+			.boot_on = 1,
+			.always_on = 1,
+		},
+		.num_consumer_supplies = ARRAY_SIZE(tps65217_ldo4_consumers),
+		.consumer_supplies = tps65217_ldo4_consumers,
+	},
+};
+
+static struct tps65217_board myir_tps65217_info = {
+	.tps65217_init_data = &tps65217_regulator_data[0],
 };
 
 static struct i2c_board_info __initdata am335x_i2c0_boardinfo[] = {
 	{
-		I2C_BOARD_INFO("tps65910", TPS65910_I2C_ID1),
-		.platform_data  = &am335x_tps65910_info,
+		I2C_BOARD_INFO("tps65217", TPS65217_I2C_ID),
+		.platform_data  = &myir_tps65217_info,
 	},
 };
 
@@ -1188,9 +1312,6 @@ static struct omap_musb_board_data musb_board_data = {
 static void __init am335x_evm_i2c_init(void)
 {
 //	evm_init_cpld();
-
-	printk("----am335x_evm_i2c_init----\n");
-
 	setup_pin_mux(i2c0_pin_mux);
 	omap_register_i2c_bus(1, 100, am335x_i2c0_boardinfo,
 				ARRAY_SIZE(am335x_i2c0_boardinfo));
