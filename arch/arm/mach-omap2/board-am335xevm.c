@@ -1289,10 +1289,20 @@ static struct tps65217_board myir_tps65217_info = {
 	.tps65217_init_data = &tps65217_regulator_data[0],
 };
 
+static struct at24_platform_data board_eeprom = {
+	.byte_len = 4096,
+	.page_size = 32,
+	.flags = AT24_FLAG_ADDR16,
+};
+
 static struct i2c_board_info __initdata am335x_i2c0_boardinfo[] = {
 	{
 		I2C_BOARD_INFO("tps65217", TPS65217_I2C_ID),
 		.platform_data  = &myir_tps65217_info,
+	},
+	{
+		I2C_BOARD_INFO("at24", 0x50),
+		.platform_data = &board_eeprom,
 	},
 };
 
