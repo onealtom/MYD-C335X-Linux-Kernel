@@ -36,7 +36,10 @@
 #include <linux/mfd/tps65910.h>
 #include <linux/mfd/tps65217.h>
 #include <linux/pwm_backlight.h>
-#include <linux/input/ti_tscadc.h>
+#include <linux/platform_data/ti_adc.h>
+#include <linux/mfd/ti_tscadc.h>
+#include <linux/input/ti_tsc.h>
+
 #include <linux/reboot.h>
 #include <linux/pwm/pwm.h>
 #include <linux/opp.h>
@@ -222,6 +225,16 @@ struct da8xx_lcdc_platform_data *myd_am335x_def_pdata ;
 static struct tsc_data am335x_touchscreen_data  = {
 	.wires  = 4,
 	.x_plate_resistance = 200,
+	.steps_to_configure = 5,
+};
+
+static struct adc_data am335x_adc_data = {
+	.adc_channels = 4,
+};
+
+static struct mfd_tscadc_board tscadc = {
+	.tsc_init = &am335x_touchscreen_data,
+	.adc_init = &am335x_adc_data,
 };
 
 static u8 am335x_iis_serializer_direction0[] = {
@@ -782,6 +795,15 @@ static void tsc_init(int evm_id, int profile)
 		pr_err("failed to register touchscreen device\n");
 }
 
+static void mfd_tscadc_init(int evm_id, int profile)
+{
+	int err;
+
+	err = am33xx_register_mfd_tscadc(&tscadc);
+	if (err)
+		pr_err("failed to register touchscreen device\n");
+}
+
 static void rgmii1_init(int evm_id, int profile)
 {
 	setup_pin_mux(rgmii1_pin_mux);
@@ -1054,7 +1076,8 @@ static struct evm_dev_cfg myd_am335x_dev_cfg[] = {
 	{rgmii2_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{display_init,     DEV_ON_BASEBOARD, PROFILE_ALL},
 	{enable_ehrpwm0,	DEV_ON_BASEBOARD, PROFILE_ALL},
-	{tsc_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
+	//{tsc_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
+	{mfd_tscadc_init, DEV_ON_BASEBOARD, PROFILE_ALL},
 	{mcasp0_init,   DEV_ON_BASEBOARD, PROFILE_ALL},
 	{usb0_init,     DEV_ON_BASEBOARD, PROFILE_ALL},
 	{usb1_init,     DEV_ON_BASEBOARD, PROFILE_ALL},	
