@@ -995,7 +995,6 @@ static struct gpio_keys_button gpio_buttons[] = {
                 .active_low             = true,
                 .desc                   = "menu",
                 .type                   = EV_KEY,
-//              .wakeup                 = 1,
         },
         {
                 .code                   = KEY_ESC,
@@ -1003,7 +1002,6 @@ static struct gpio_keys_button gpio_buttons[] = {
                 .active_low             = true,
                 .desc                   = "back",
                 .type                   = EV_KEY,
-//              .wakeup                 = 1,
         },
 };
 
@@ -1035,12 +1033,18 @@ static struct gpio_led gpio_leds[] = {
                 .name                   = "sys_led",
                 .default_trigger        = "heartbeat",
                 .gpio                   = GPIO_TO_PIN(3, 18),
+		.active_low             = 1,
         },{
                 .name                   = "user_led0",
                 .gpio                   = GPIO_TO_PIN(0, 3),
+		.active_low             = 1,
+		.default_state          = LEDS_GPIO_DEFSTATE_OFF,
+				
         },{
-			    .name                   = "user_led1",
-			    .gpio                   = GPIO_TO_PIN(0, 27),
+	    	.name                   = "user_led1",
+		.gpio                   = GPIO_TO_PIN(0, 27),
+		.active_low             = 1,
+		.default_state          = LEDS_GPIO_DEFSTATE_OFF,
 	},
 };
 
