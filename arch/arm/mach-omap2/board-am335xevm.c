@@ -107,11 +107,17 @@ __setup("dispmode=", lcd_type_init);
 static char* display_mode = "hdmi480p";
 module_param(display_mode, charp, S_IRUGO);
 
-#define NUM_OF_LCDMODE 11
-enum  display_num{  lcd4i3  , lcd7i , lcd7ir  , lcd7ic,  vga  ,  lvds  ,  hdmi640x480  ,
-                             hdmi480p   ,  hdmi1024x768  ,  hdmi720p  ,  hdmi1080i  };
-const char *display_num[]={ "lcd4i3" , "lcd7i" , "lcd7ir" , "lcd7ic", "vga" , "lvds" , "hdmi640x480" ,
-                            "hdmi480p"  , "hdmi1024x768" , "hdmi720p" , "hdmi1080i" };
+#define NUM_OF_LCDMODE 13
+/*
+ * lcd7ir_k, lcd7ic_k, lcd7ic_ks, new types from MYiR new LCD module
+ * 'r' means Resistive and 'c' means Capacitive, 's' represent use
+ * the silead touch IC, gsl1688 -- Commented by JBO
+ */
+enum  display_num{  lcd4i3 , lcd7ir , lcd7ic, lcd7ir_k, lcd7ic_k, lcd7ic_ks, vga ,
+					lvds  ,  hdmi640x480  ,  hdmi480p ,  hdmi1024x768  ,  hdmi720p  ,  hdmi1080i  };
+const char *display_num[]={ "lcd4i3" , "lcd7ir" , "lcd7ic", "lcd7ir-k",
+							"lcd7ic-k", "lcd7ic-ks", "vga" , "lvds" ,
+							"hdmi640x480" , "hdmi480p"  , "hdmi1024x768" , "hdmi720p" , "hdmi1080i" };
 
 static const struct display_panel disp_panel = {
 	WVGA,
@@ -167,26 +173,34 @@ struct da8xx_lcdc_platform_data	am335x_lcdc_pdata[] = {
 		.manu_name		= "InnoLux",
 		.controller_data	= &lcd_cfg,
 		.type			= "4.3inch_LCD",	
-	},{
-                .manu_name              = "InnoLux",
-                .controller_data        = &lcd_cfg,
-                .type                   = "7inch_LCD_RES",
-	},{
+	},{ // lcd7ir
 		.manu_name		= "InnoLux",
 		.controller_data	= &lcd_cfg,
-		.type			= "7inch_LCD_RES",
+		.type			= "7inch_LCD",
+	},{ // lcd7ic
+		.manu_name		= "InnoLux",
+		.controller_data	= &lcd_cfg,
+		.type			= "7inch_LCD",
+	},{ // lcd7ir_k
+		.manu_name		= "InnoLux",
+		.controller_data	= &lcd_cfg,
+		.type			= "7inch_LCD",
+	},{ // lcd7ic_k
+        .manu_name      = "InnoLux",
+        .controller_data    = &lcd_cfg,
+        .type           = "7inch_LCD",		
+	},{ // lcd7ic_ks
+		.manu_name      = "InnoLux",
+		.controller_data    = &lcd_cfg,
+		.type           = "7inch_LCD",
 	},{
-                .manu_name              = "InnoLux",
-                .controller_data        = &lcd_cfg,
-                .type                   = "7inch_LCD_CAP",		
+	    .manu_name		= "InnoLux",
+        .controller_data	= &lcd_cfg,
+	    .type			= "VGA",		
 	},{
-	        .manu_name		= "InnoLux",
-        	.controller_data	= &lcd_cfg,
-	        .type			= "VGA",		
-	},{
-	        .manu_name		= "InnoLux",
-        	.controller_data	= &lcd_cfg,
-	        .type			= "LVDS",	
+	    .manu_name		= "InnoLux",
+        .controller_data	= &lcd_cfg,
+	    .type			= "LVDS",	
 	},{
 		.manu_name    		= "NXP HDMI",
 		.controller_data  	= &dvi_cfg,
@@ -729,52 +743,55 @@ static void display_init(int evm_id, int profile)
 	
 	setup_pin_mux(lcdc_pin_mux);
 	switch(i){
-		case hdmi640x480:
-		case hdmi480p:
-		case hdmi1024x768:
-		case hdmi720p:
-		case hdmi1080i:
-			if (conf_disp_pll(371000000)) {
-				pr_info("Failed to set pixclock to 371000000, not attempting to"
-						"register DVI adapter\n");
-				return;
-			}
-			break;
-		case lcd4i3:
-		case lcd7i:
-		case lcd7ir:
-		case lcd7ic:
-		case vga:
-		case lvds:
-		default:
-			if (conf_disp_pll(300000000)) {
-				pr_info("Failed configure display PLL, not attempting to"
-						"register LCDC\n");
-				return;
-			}
-			break;
+	case hdmi640x480:
+	case hdmi480p:
+	case hdmi1024x768:
+	case hdmi720p:
+	case hdmi1080i:
+		if (conf_disp_pll(371000000)) {
+			pr_info("Failed to set pixclock to 371000000, not attempting to"
+				"register DVI adapter\n");
+			return;
+		}
+		break;
+	case lcd4i3:
+	case lcd7ir:
+	case lcd7ic:
+	case lcd7ir_k:
+	case lcd7ic_k:
+	case lcd7ic_ks:
+	case vga:
+	case lvds:
+	default:
+		if (conf_disp_pll(300000000)) {
+			pr_info("Failed configure display PLL, not attempting to"
+					"register LCDC\n");
+			return;
+		}
+		break;
 	}
 	switch(i)
 	{
-		case lcd4i3:
-		case lcd7i:
-		case lcd7ir:
-		case lcd7ic:
-		case hdmi640x480:
-		case hdmi720p:	
-			myd_am335x_def_pdata=&am335x_lcdc_pdata[i];
-			break;
-		case hdmi480p:
-		case hdmi1024x768:
-		case hdmi1080i:
-			myd_am335x_def_pdata=&am335x_lcdc_pdata[hdmi640x480];
-			break;			
-		case vga:
-		case lvds:
-		default:
-			myd_am335x_def_pdata=&am335x_lcdc_pdata[lcd4i3];
-			break;
-
+	case lcd4i3:
+	case lcd7ir:
+	case lcd7ic:
+	case lcd7ir_k:
+	case lcd7ic_k:
+	case lcd7ic_ks:
+	case hdmi640x480:
+	case hdmi720p:
+		myd_am335x_def_pdata=&am335x_lcdc_pdata[i];
+		break;
+	case hdmi480p:
+	case hdmi1024x768:
+	case hdmi1080i:
+		myd_am335x_def_pdata=&am335x_lcdc_pdata[hdmi640x480];
+		break;			
+	case vga:
+	case lvds:
+	default:
+		myd_am335x_def_pdata=&am335x_lcdc_pdata[lcd4i3];
+		break;
 	}
 
 	if (am33xx_register_lcdc(myd_am335x_def_pdata))
@@ -912,10 +929,20 @@ static void evm_nand_init(int evm_id, int profile)
 	omap_init_elm();
 }
 
+/* ft5x0x platform data */
 static struct ft5x0x_ts_platform_data ts_plat_data = {
 	.irq            = -1,
 	.polling_mode   = 1,
 	.multi_touch    = 0,
+};
+
+/* gslx680 platform data */
+static struct gslx680_platform_data gslx680_plat_data = {
+	.irq            = 0,
+	.irq_port       = 0,
+	.wake           = GPIO_TO_PIN(3, 20),
+	.multi_touch    = 0,
+	.polling_mode   = 1,
 };
 
 static struct i2c_board_info am335x_i2c1_boardinfo[] = {
@@ -928,6 +955,10 @@ static struct i2c_board_info am335x_i2c1_boardinfo[] = {
 	{
 		I2C_BOARD_INFO("ft5x06_ts", 0x38),
 		.platform_data = &ts_plat_data,
+	},
+	{
+		I2C_BOARD_INFO("gslX680", 0x40),
+		.platform_data = &gslx680_plat_data,
 	},
 };
 
@@ -1353,7 +1384,7 @@ static void __init am335x_evm_i2c_init(void)
 	omap_register_i2c_bus(1, 100, am335x_i2c0_boardinfo,
 				ARRAY_SIZE(am335x_i2c0_boardinfo));
 	setup_pin_mux(i2c1_pin_mux);
-	omap_register_i2c_bus(2, 100, am335x_i2c1_boardinfo,
+	omap_register_i2c_bus(2, 300, am335x_i2c1_boardinfo,
 				ARRAY_SIZE(am335x_i2c1_boardinfo));
 }
 

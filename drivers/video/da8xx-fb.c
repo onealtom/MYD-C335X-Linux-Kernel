@@ -257,17 +257,22 @@ static struct da8xx_panel known_lcd_panels[] = {
                 .pxl_clk = 36000000,
                 .invert_pxl_clk = 0,
         },
-        [2] = {/* Capacitive touch screen */
-                .name = "7inch_LCD_CAP",
+		/*
+		 * 7inch_LCD Used by lcd types:
+		 *   lcd7ir, lcd7ic, lcd7ir_k, lcd7ic_k, lcd7ic_ks
+		 * -- Commented by JBO
+		 */
+        [2] = {
+                .name = "7inch_LCD",
                 .width = 800,
                 .height = 480,
                 .hfp = 210,
-                .hbp = 1/*46/1*/,
-                .hsw = 43/*20*/,
+                .hbp = 1,
+                .hsw = 43,
                 .vfp = 22,
-                .vbp = 1/*23/1*/,
-                .vsw = 22/*10*/,
-                .pxl_clk = 96000000,/*36000000,*/
+                .vbp = 1,
+                .vsw = 22,
+                .pxl_clk = 36000000,
                 .invert_pxl_clk = 0,
         },
         [3] = {

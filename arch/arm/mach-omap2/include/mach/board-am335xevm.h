@@ -45,11 +45,20 @@ void am33xx_cpsw_macidfillup(char *eeprommacid0, char *eeprommacid1);
 void am33xx_sr_init(void);
 void am33xx_d_can_init(unsigned int instance);
 
-/* Struct for ft5x0x */
+/* Structure for ft5x0x */
 struct ft5x0x_ts_platform_data {
 	u16    irq;            /* irq number of ts used */
 	u8     polling_mode;   /* set 1 for polling mode and 0 for interruputing mode */
 	u8     multi_touch;    /* set 1 if supporting multi-touch */
+};
+
+/* Structure for gslx680 */
+struct gslx680_platform_data {
+	u16     irq;
+	u16     wake;
+	u16     irq_port;
+	u8      multi_touch;
+	u8      polling_mode;
 };
 
 #endif
