@@ -1362,6 +1362,9 @@ static struct i2c_board_info __initdata am335x_i2c0_boardinfo[] = {
 		I2C_BOARD_INFO("at24", 0x50),
 		.platform_data = &board_eeprom,
 	},
+	{
+		I2C_BOARD_INFO("rx8025t", 0x32),
+	},
 };
 
 static struct omap_musb_board_data musb_board_data = {
