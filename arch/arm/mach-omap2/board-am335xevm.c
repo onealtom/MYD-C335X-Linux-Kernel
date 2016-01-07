@@ -1397,7 +1397,7 @@ static struct tca8418_keypad_platform_data am335x_tca8418_info = {
 	.rows=4,
 	.cols=4,
 	.rep=0,
-	.irq_is_gpio=1,
+	.irq_is_gpio=0,
 
 };
 
@@ -1415,7 +1415,7 @@ static struct i2c_board_info __initdata am335x_i2c0_boardinfo[] = {
 	},
 	{
 		I2C_BOARD_INFO("tca8418_keypad", 0x34),
-		.irq = GPIO_TO_PIN(0, 29),
+		.irq = 7,
 		.platform_data =  (void *)&am335x_tca8418_info,
 	},
 };

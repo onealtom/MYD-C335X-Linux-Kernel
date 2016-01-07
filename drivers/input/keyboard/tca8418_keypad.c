@@ -618,8 +618,10 @@ static int __devinit tca8418_keypad_probe(struct i2c_client *client,
 	}
 
 	error = request_threaded_irq(client->irq, NULL, tca8418_irq_handler,
-				     IRQF_TRIGGER_FALLING ,
+				     IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
 				     client->name, keypad_data);
+
+	irq_set_irq_type(client->irq, IRQ_TYPE_LEVEL_LOW);
 
 	if (error) {
 		dev_dbg(&client->dev,
