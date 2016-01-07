@@ -64,7 +64,8 @@
 #include <plat/mmc.h>
 #include <plat/emif.h>
 #include <plat/nand.h>
-
+#include <linux/input/tca8418_keypad.h>
+ 
 #include "board-flash.h"
 #include "cpuidle33xx.h"
 #include "mux.h"
@@ -539,7 +540,7 @@ static struct pinmux_config d_can_pin_mux[] = {
 /* pinmux for gpio based key */
 static struct pinmux_config gpio_keys_pin_mux[] = {
 		{"mii1_col.gpio3_0",    OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},
-		{"rmii1_refclk.gpio0_29",	OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},
+		//{"rmii1_refclk.gpio0_29",	OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},
 	{NULL, 0},
 };
 
@@ -652,6 +653,11 @@ static struct pinmux_config uart4_pin_mux[] = {
         {"uart0_ctsn.uart4_rxd", OMAP_MUX_MODE1 | AM33XX_PIN_INPUT_PULLUP},
         {"uart0_rtsn.uart4_txd", OMAP_MUX_MODE1 | AM33XX_PULL_ENBL},
         {NULL, 0},
+};
+
+static struct pinmux_config gpio_keybrdint_mux[] = {
+	{"rmii1_refclk.gpio0_29",	OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},
+    {NULL, 0},
 };
 
 
@@ -1102,7 +1108,14 @@ static void gpio_led_init(int evm_id, int profile)
 		pr_err("failed to register gpio led device\n");
 }
 
+static void keyboard_int_init(int evm_id, int profile)
+{
+	int ret;
+	setup_pin_mux(gpio_keybrdint_mux);
+	gpio_request(GPIO_TO_PIN(0, 29), "abort");
 
+	gpio_direction_input( GPIO_TO_PIN(0, 29) );
+}
 
 static struct evm_dev_cfg myd_am335x_dev_cfg[] = {
 	{evm_nand_init, DEV_ON_BASEBOARD, PROFILE_ALL},
@@ -1121,6 +1134,7 @@ static struct evm_dev_cfg myd_am335x_dev_cfg[] = {
 	{uart3_init,    DEV_ON_BASEBOARD, PROFILE_ALL},
 	{uart4_init,    DEV_ON_BASEBOARD, PROFILE_ALL},
 	{d_can_init,    DEV_ON_BASEBOARD, PROFILE_ALL},
+	{keyboard_int_init,    DEV_ON_BASEBOARD, PROFILE_ALL},
 	{gpio_keys_init,  DEV_ON_BASEBOARD, PROFILE_ALL},
 	{gpio_led_init,  DEV_ON_BASEBOARD, PROFILE_ALL},
 	{NULL, 0, 0},
@@ -1353,6 +1367,40 @@ static struct at24_platform_data board_eeprom = {
 	.flags = AT24_FLAG_ADDR16,
 };
 
+static const uint32_t am335x_evm_matrix_keys[] = {
+    KEY(0, 0, KEY_UP),  //  KEY(row, col, val)
+    KEY(1, 0, KEY_RIGHT),
+    KEY(2, 0, KEY_LEFT),
+    KEY(3, 0, KEY_DOWN),
+    KEY(0, 1, KEY_F10),
+    KEY(1, 1, KEY_SEND),
+    KEY(2, 1, KEY_END),
+    KEY(3, 1, KEY_VOLUMEDOWN),
+    KEY(0, 2, KEY_F9),
+    KEY(1, 2, KEY_3),
+    KEY(2, 2, KEY_6),
+    KEY(3, 2, KEY_9),
+    KEY(0, 3, KEY_BACK),
+    KEY(1, 3, KEY_2),
+    KEY(2, 3, KEY_5),
+    KEY(3, 3, KEY_8),
+
+};
+
+const struct matrix_keymap_data am335x_evm_keymap_data = {
+	.keymap      = am335x_evm_matrix_keys,
+	.keymap_size = ARRAY_SIZE(am335x_evm_matrix_keys),
+};
+
+static struct tca8418_keypad_platform_data am335x_tca8418_info = {
+	.keymap_data = &am335x_evm_keymap_data,
+	.rows=4,
+	.cols=4,
+	.rep=0,
+	.irq_is_gpio=1,
+
+};
+
 static struct i2c_board_info __initdata am335x_i2c0_boardinfo[] = {
 	{
 		I2C_BOARD_INFO("tps65217", TPS65217_I2C_ID),
@@ -1364,6 +1412,11 @@ static struct i2c_board_info __initdata am335x_i2c0_boardinfo[] = {
 	},
 	{
 		I2C_BOARD_INFO("rx8025t", 0x32),
+	},
+	{
+		I2C_BOARD_INFO("tca8418_keypad", 0x34),
+		.irq = GPIO_TO_PIN(0, 29),
+		.platform_data =  (void *)&am335x_tca8418_info,
 	},
 };
 
