@@ -30,6 +30,7 @@
 #include <linux/delay.h>
 #include <linux/slab.h>
 #include <linux/interrupt.h>
+ #include <linux/irq.h>
 #include <linux/workqueue.h>
 #include <linux/gpio.h>
 #include <linux/i2c.h>
@@ -109,6 +110,15 @@
 #define KEY_EVENT_CODE		0x7f
 #define KEY_EVENT_VALUE		0x80
 
+
+struct gpio_controller {
+	u8 con_id;
+	u8 reg_dir;
+	u8 reg_ds;
+	u8 reg_do;
+	u8 offset;
+};
+
 #define LOG() printk("[MDBG]%s:[%s][%d]\n", __FUNCTION__, __FILE__, __LINE__)
 
 static const struct i2c_device_id tca8418_id[] = {
@@ -127,8 +137,23 @@ struct tca8418_keypad {
 	struct i2c_client *client;
 	struct input_dev *input;
 
+	/* Added for gpio function */
+	struct gpio_controller io_con[TCA8418_MAX_ROWS + TCA8418_MAX_COLS];
+	struct gpio_chip gpio;
+	int gpio_base;
+	unsigned long io_mask;
+	u8 dir_val[3];
+	u8 ds_val[3];
+	u8 do_val[3];
+	//u8 rows;
+	//u8 cols;
+	u8 ngpio;
+
 	/* Flexible array member, must be at end of struct */
 	unsigned short keymap[];
+
+
+
 };
 
 /*
@@ -258,7 +283,7 @@ static int __devinit tca8418_configure(struct tca8418_keypad *keypad_data)
 	reg  =  ~(~0 << keypad_data->rows);
 	reg += (~(~0 << keypad_data->cols)) << 8;
 	keypad_data->keypad_mask = reg;
-
+	
 	/* Set registers to keypad mode */
 	error |= tca8418_write_byte(keypad_data, REG_KP_GPIO1, reg);
 	error |= tca8418_write_byte(keypad_data, REG_KP_GPIO2, reg >> 8);
@@ -268,20 +293,233 @@ static int __devinit tca8418_configure(struct tca8418_keypad *keypad_data)
 	error |= tca8418_write_byte(keypad_data, REG_DEBOUNCE_DIS1, reg);
 	error |= tca8418_write_byte(keypad_data, REG_DEBOUNCE_DIS2, reg >> 8);
 	error |= tca8418_write_byte(keypad_data, REG_DEBOUNCE_DIS3, reg >> 16);
-//
-	error = tca8418_read_byte(keypad_data, 0x01, &reg);
-	error = tca8418_read_byte(keypad_data, 0x02, &reg);
-		
-	error = tca8418_read_byte(keypad_data, REG_KP_GPIO1, &reg);
-	error = tca8418_read_byte(keypad_data, REG_KP_GPIO2, &reg);
-	error = tca8418_read_byte(keypad_data, REG_KP_GPIO3, &reg);
 	
-	error = tca8418_read_byte(keypad_data, REG_DEBOUNCE_DIS1, &reg);
-	error = tca8418_read_byte(keypad_data, REG_DEBOUNCE_DIS2, &reg);
-	error = tca8418_read_byte(keypad_data, REG_DEBOUNCE_DIS3, &reg);
-//	
 	return error;
 }
+
+
+/***************************** GPIO functions *******************************/
+static int tca8418_gpio_request(struct gpio_chip *gpio, unsigned offset)
+{
+	struct tca8418_keypad *pdata =
+			container_of(gpio, struct tca8418_keypad, gpio);
+	int err = 0;
+
+	BUG_ON(offset >= pdata->ngpio);
+	
+	dev_dbg(&pdata->client->dev, "%s: offset = %d\n", __func__, offset);
+
+	if (test_and_set_bit(offset, &pdata->io_mask)) {
+		err = -EBUSY;
+	}
+
+	return err;
+}
+
+
+static void tca8418_gpio_free(struct gpio_chip *gpio, unsigned offset)
+{
+	struct tca8418_keypad *pdata =
+			container_of(gpio, struct tca8418_keypad, gpio);
+
+	BUG_ON(offset >= pdata->ngpio);
+
+	clear_bit(offset, &pdata->io_mask);
+}
+
+
+static int tca8418_direction_input(struct gpio_chip *gpio, unsigned offset)
+{
+	struct tca8418_keypad *pdata =
+			container_of(gpio, struct tca8418_keypad, gpio);
+	int err;
+	u8 dir = 0, reg_offset, con_id;
+
+	BUG_ON(offset >= pdata->ngpio);
+
+	reg_offset = pdata->io_con[offset].offset;
+	con_id = pdata->io_con[offset].con_id;
+	
+	dir = pdata->dir_val[con_id];
+	dir &= ~(1 << reg_offset);
+	dev_dbg(&pdata->client->dev, "%s(), reg:%#x, dir:%#x",
+			__func__, pdata->io_con[offset].reg_dir, dir);
+	err = tca8418_write_byte(pdata, pdata->io_con[offset].reg_dir, dir);
+	if (!err)
+		pdata->dir_val[con_id] = dir;
+
+	return err;
+}
+
+static int tca8418_direction_output(struct gpio_chip *gpio, unsigned offset,
+				    int value)
+{
+	struct tca8418_keypad *pdata =
+			container_of(gpio, struct tca8418_keypad, gpio);
+	int err;
+	u8 dir = 0, val = 0, reg_offset, con_id;
+
+	BUG_ON(offset >= pdata->ngpio);
+
+	reg_offset = pdata->io_con[offset].offset;
+	con_id = pdata->io_con[offset].con_id;
+	
+	/* set value */
+	val = pdata->do_val[con_id];
+	val |= (!!value) << reg_offset;
+	dev_dbg(&pdata->client->dev, "%s(), reg:%#x, val:%#x",
+			__func__, pdata->io_con[offset].reg_do, val);
+	err = tca8418_write_byte(pdata, pdata->io_con[offset].reg_do, val);
+	if (err)
+		return err;
+	pdata->do_val[con_id] = val;
+	
+	/* set dir */
+	dir = pdata->dir_val[con_id];
+	dir |= 1 << reg_offset;
+	dev_dbg(&pdata->client->dev, "%s(), reg:%#x, dir:%#x",
+			__func__, pdata->io_con[offset].reg_dir, dir);
+	err = tca8418_write_byte(pdata, pdata->io_con[offset].reg_dir, dir);
+	
+	if (!err)
+		pdata->dir_val[con_id] = dir;
+
+	return err;
+}
+
+
+static int tca8418_get(struct gpio_chip *gpio, unsigned offset)
+{
+	struct tca8418_keypad *pdata =
+			container_of(gpio, struct tca8418_keypad, gpio);
+	u8 con_id, reg_offset;
+	int level = 0, err;
+
+	BUG_ON(offset >= pdata->ngpio);
+
+	reg_offset = pdata->io_con[offset].offset;
+	con_id = pdata->io_con[offset].con_id;
+	
+	/* return cache value if output */
+	if (BIT(reg_offset) & pdata->dir_val[con_id]) {
+		level = (BIT(reg_offset) & pdata->do_val[con_id])?1:0;
+	} else {
+		err = tca8418_read_byte(pdata, pdata->io_con[offset].reg_ds, (u8 *)&level);
+		if (err) {
+			return err;
+		}
+		pdata->ds_val[con_id] = level&0xff;
+		level = (BIT(reg_offset) & level)?1:0;
+		
+		dev_dbg(&pdata->client->dev, "%s(), reg:%#x, val:%#x",
+			__func__, pdata->io_con[offset].reg_ds, pdata->ds_val[con_id]);
+	}
+
+	return level;
+}
+
+static void tca8418_set(struct gpio_chip *gpio, unsigned offset, int value)
+{
+	struct tca8418_keypad *pdata =
+			container_of(gpio, struct tca8418_keypad, gpio);
+	u8 con_id, reg_offset, val;
+	int err;
+
+	BUG_ON(offset >= pdata->ngpio);
+
+	reg_offset = pdata->io_con[offset].offset;
+	con_id = pdata->io_con[offset].con_id;
+	
+	val = pdata->do_val[con_id];
+	val &= ~(1 << reg_offset);
+	val |= (!!value) << reg_offset;
+	
+	dev_dbg(&pdata->client->dev, "%s(), reg:%#x, val:%#x",
+			__func__, pdata->io_con[offset].reg_do, val);
+	
+	err = tca8418_write_byte(pdata, pdata->io_con[offset].reg_do, val);
+	if (!err)
+		pdata->do_val[con_id] = val;
+}
+
+static int setup_gpio(struct tca8418_keypad *pdata)
+{
+	int i, index=0;
+	
+	/* check and set rows */
+	for (i=pdata->rows;i<TCA8418_MAX_ROWS;i++) {
+		pdata->io_con[index].con_id = 0;
+		pdata->io_con[index].reg_dir = REG_GPIO_DIR1;
+		pdata->io_con[index].reg_ds = REG_GPIO_DAT_STAT1;
+		pdata->io_con[index].reg_do = REG_GPIO_DAT_OUT1;
+		pdata->io_con[index].offset = i;
+		index ++;
+	}
+
+	/* check and set cols */
+	for (i=pdata->cols;i<TCA8418_MAX_COLS;i++) {
+		pdata->io_con[index].con_id = i<8?1:2;
+		pdata->io_con[index].reg_dir = i<8?REG_GPIO_DIR2:REG_GPIO_DIR3;
+		pdata->io_con[index].reg_ds = i<8?REG_GPIO_DAT_STAT2:REG_GPIO_DAT_STAT3;
+		pdata->io_con[index].reg_do = i<8?REG_GPIO_DAT_OUT2:REG_GPIO_DAT_OUT3;
+		pdata->io_con[index].offset = i%8;
+		index ++;
+	}
+
+	return 0;
+}
+
+static int tca8418_register_gpio(struct tca8418_keypad *pdata)
+{
+	int i;
+	
+	pdata->ngpio = TCA8418_MAX_ROWS - pdata->rows
+				 + TCA8418_MAX_COLS - pdata->cols;
+	setup_gpio(pdata);
+	
+	pdata->gpio.label = TCA8418_NAME;
+	pdata->gpio.request	= tca8418_gpio_request;
+	pdata->gpio.free	= tca8418_gpio_free;
+	pdata->gpio.get		= tca8418_get;
+	pdata->gpio.set		= tca8418_set;
+	pdata->gpio.direction_input = tca8418_direction_input;
+	pdata->gpio.direction_output = tca8418_direction_output;
+
+	pdata->gpio.base = pdata->gpio_base;
+	pdata->gpio.ngpio = pdata->ngpio;
+	pdata->gpio.can_sleep = 1;
+	pdata->gpio.dev = &pdata->client->dev;
+	pdata->gpio.owner = THIS_MODULE;
+
+	/* Set all left gpios to input*/
+	if (tca8418_write_byte(pdata, REG_GPIO_DIR1, 0))
+		return -EIO;
+	if (tca8418_write_byte(pdata, REG_GPIO_DIR2, 0))
+		return -EIO;
+	if (tca8418_write_byte(pdata, REG_GPIO_DIR3, 0))
+		return -EIO;
+	
+	/* Set all pullup enable */
+	if (tca8418_write_byte(pdata, REG_GPIO_PULL1, 0))
+		return -EIO;
+	if (tca8418_write_byte(pdata, REG_GPIO_PULL2, 0))
+		return -EIO;
+	if (tca8418_write_byte(pdata, REG_GPIO_PULL3, 0))
+		return -EIO;
+	
+	/* init register cache */
+	for (i=0;i<3;i++) {
+		if (tca8418_read_byte(pdata, REG_GPIO_DIR1+i, &pdata->dir_val[i]))
+			return -EIO;
+		if (tca8418_read_byte(pdata, REG_GPIO_DAT_STAT1+i, &pdata->ds_val[i]))
+			return -EIO;
+		if (tca8418_read_byte(pdata, REG_GPIO_DAT_OUT1+i, &pdata->do_val[i]))
+			return -EIO;
+	}
+	
+	return gpiochip_add(&pdata->gpio);
+}
+
 
 static int __devinit tca8418_keypad_probe(struct i2c_client *client,
 					  const struct i2c_device_id *id)
@@ -291,7 +529,9 @@ static int __devinit tca8418_keypad_probe(struct i2c_client *client,
 	struct tca8418_keypad *keypad_data;
 	struct input_dev *input;
 	int error, row_shift, max_keys;
-	LOG();
+
+	int gpio_base = -1;
+
 	/* Copy the platform data */
 	if (!pdata) {
 		dev_dbg(&client->dev, "no platform data\n");
@@ -333,6 +573,8 @@ static int __devinit tca8418_keypad_probe(struct i2c_client *client,
 	keypad_data->cols = pdata->cols;
 	keypad_data->client = client;
 	keypad_data->row_shift = row_shift;
+	//keypad_data->gpio_base = pdata->gpio_base;
+	keypad_data->gpio_base = -1;
 
 	/* Initialize the chip or fail if chip isn't present */
 	error = tca8418_configure(keypad_data);
@@ -374,9 +616,9 @@ static int __devinit tca8418_keypad_probe(struct i2c_client *client,
 		client->irq = gpio_to_irq(client->irq);
 		printk(KERN_ERR "irq_is_gpio !!!, irq = %d(gpio:%d)\n", client->irq, client->irq);
 	}
-LOG();
+
 	error = request_threaded_irq(client->irq, NULL, tca8418_irq_handler,
-				     IRQF_TRIGGER_FALLING,
+				     IRQF_TRIGGER_FALLING ,
 				     client->name, keypad_data);
 
 	if (error) {
@@ -393,7 +635,14 @@ LOG();
 		goto fail3;
 	}
 
+	if (tca8418_register_gpio(keypad_data)) {
+		dev_dbg(&client->dev, "Unable to register gpio chip!!\n");
+	} else {
+		dev_dbg(&client->dev, "gpio chip base: %d, ngpio:%d\n", keypad_data->gpio_base, keypad_data->ngpio);
+	}
+
 	i2c_set_clientdata(client, keypad_data);
+
 	return 0;
 
 fail3:
