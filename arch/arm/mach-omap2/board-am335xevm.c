@@ -276,7 +276,8 @@ static struct omap2_hsmmc_info am335x_mmc[] __initdata = {
 	{
 		.mmc            = 1,
 		.caps           = MMC_CAP_4_BIT_DATA,
-		.gpio_cd        = GPIO_TO_PIN(3, 21),
+		//.gpio_cd        = GPIO_TO_PIN(3, 21),
+		.gpio_cd        = GPIO_TO_PIN(3, 13),
 		.gpio_wp        = -EINVAL,
 		.ocr_mask       = MMC_VDD_32_33 | MMC_VDD_33_34, /* 3V3 */
 	},
@@ -526,7 +527,8 @@ static struct pinmux_config mmc0_common_pin_mux[] = {
 
 
 static struct pinmux_config mmc0_cd_only_pin_mux[] = {
-	{"mcasp0_ahclkx.gpio3_21",  OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP},
+	//{"mcasp0_ahclkx.gpio3_21",  OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP},
+	{"usb1_drvvbus.gpio3_13",  OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP},
 	{NULL, 0},
 };
 
@@ -540,7 +542,7 @@ static struct pinmux_config d_can_pin_mux[] = {
 /* pinmux for gpio based key */
 static struct pinmux_config gpio_keys_pin_mux[] = {
 		{"mii1_col.gpio3_0",    OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},
-		//{"rmii1_refclk.gpio0_29",	OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},
+		{"rmii1_refclk.gpio0_29",	OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},
 	{NULL, 0},
 };
 
@@ -653,11 +655,6 @@ static struct pinmux_config uart4_pin_mux[] = {
         {"uart0_ctsn.uart4_rxd", OMAP_MUX_MODE1 | AM33XX_PIN_INPUT_PULLUP},
         {"uart0_rtsn.uart4_txd", OMAP_MUX_MODE1 | AM33XX_PULL_ENBL},
         {NULL, 0},
-};
-
-static struct pinmux_config gpio_keybrdint_mux[] = {
-	{"rmii1_refclk.gpio0_29",	OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},
-    {NULL, 0},
 };
 
 
@@ -858,33 +855,41 @@ static struct mtd_partition am335x_nand_partitions[] = {
 	{
 		.name           = "SPL",
 		.offset         = 0,			/* Offset = 0x0 */
-		.size           = SZ_128K,
+		.size           = SZ_512K,
 	},{
 		.name           = "SPL.backup1",
 		.offset         = MTDPART_OFS_APPEND,	/* Offset = 0x20000 */
-		.size           = SZ_128K,
+		.size           = SZ_512K,
 	},{
 		.name           = "SPL.backup2",
 		.offset         = MTDPART_OFS_APPEND,	/* Offset = 0x40000 */
-		.size           = SZ_128K,
+		.size           = SZ_512K,
 	},{
 		.name           = "SPL.backup3",
 		.offset         = MTDPART_OFS_APPEND,	/* Offset = 0x60000 */
-		.size           = SZ_128K,
+		.size           = SZ_512K,
 	},{
-		.name           = "U-Boot",
+		.name           = "u-boot-spl-os",
+		.offset         = MTDPART_OFS_APPEND,	/* Offset = 0x60000 */
+		.size           = SZ_512K,
+	},{
+		.name           = "u-boot",
 		.offset         = MTDPART_OFS_APPEND,   /* Offset = 0x80000 */
-		.size           = 15 * SZ_128K,
+		.size           = 2 * SZ_512K,
 	},{
-		.name           = "U-Boot Env",
+		.name           = "u-boot-env",
 		.offset         = MTDPART_OFS_APPEND,   /* Offset = 0x260000 */
-		.size           = 1 * SZ_128K,
+		.size           = SZ_512K,
 	},{
-		.name           = "Kernel",
+		.name           = "u-boot-env.backup1",
+		.offset         = MTDPART_OFS_APPEND,   /* Offset = 0x260000 */
+		.size           = SZ_512K,
+	},{
+		.name           = "NAND.kernel",
 		.offset         = MTDPART_OFS_APPEND,   /* Offset = 0x280000 */
-		.size           = 40 * SZ_128K,
+		.size           = 10 * SZ_512K,
 	},{
-		.name           = "File System",
+		.name           = "NAND.file-system",
 		.offset         = MTDPART_OFS_APPEND,   /* Offset = 0x780000 */
 		.size           = MTDPART_SIZ_FULL,
 	},
@@ -1108,15 +1113,6 @@ static void gpio_led_init(int evm_id, int profile)
 		pr_err("failed to register gpio led device\n");
 }
 
-static void keyboard_int_init(int evm_id, int profile)
-{
-	int ret;
-	setup_pin_mux(gpio_keybrdint_mux);
-	gpio_request(GPIO_TO_PIN(0, 29), "abort");
-
-	gpio_direction_input( GPIO_TO_PIN(0, 29) );
-}
-
 static struct evm_dev_cfg myd_am335x_dev_cfg[] = {
 	{evm_nand_init, DEV_ON_BASEBOARD, PROFILE_ALL},
 	{mmc0_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
@@ -1133,9 +1129,8 @@ static struct evm_dev_cfg myd_am335x_dev_cfg[] = {
 	{uart2_init,    DEV_ON_BASEBOARD, PROFILE_ALL},
 	{uart3_init,    DEV_ON_BASEBOARD, PROFILE_ALL},
 	{uart4_init,    DEV_ON_BASEBOARD, PROFILE_ALL},
-	{d_can_init,    DEV_ON_BASEBOARD, PROFILE_ALL},
-	{keyboard_int_init,    DEV_ON_BASEBOARD, PROFILE_ALL},
-	{gpio_keys_init,  DEV_ON_BASEBOARD, PROFILE_ALL},
+	//{d_can_init,    DEV_ON_BASEBOARD, PROFILE_ALL},
+	//{gpio_keys_init,  DEV_ON_BASEBOARD, PROFILE_ALL},
 	{gpio_led_init,  DEV_ON_BASEBOARD, PROFILE_ALL},
 	{NULL, 0, 0},
 };
@@ -1407,6 +1402,9 @@ static struct i2c_board_info __initdata am335x_i2c0_boardinfo[] = {
 		.platform_data  = &myir_tps65217_info,
 	},
 	{
+		I2C_BOARD_INFO("sgtl5000", 0x0A),
+	},
+	{
 		I2C_BOARD_INFO("at24", 0x50),
 		.platform_data = &board_eeprom,
 	},
@@ -1439,9 +1437,9 @@ static void __init am335x_evm_i2c_init(void)
 	setup_pin_mux(i2c0_pin_mux);
 	omap_register_i2c_bus(1, 100, am335x_i2c0_boardinfo,
 				ARRAY_SIZE(am335x_i2c0_boardinfo));
-	setup_pin_mux(i2c1_pin_mux);
+	/*setup_pin_mux(i2c1_pin_mux);
 	omap_register_i2c_bus(2, 300, am335x_i2c1_boardinfo,
-				ARRAY_SIZE(am335x_i2c1_boardinfo));
+				ARRAY_SIZE(am335x_i2c1_boardinfo));*/
 }
 
 static struct resource am335x_rtc_resources[] = {

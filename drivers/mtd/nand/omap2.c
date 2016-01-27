@@ -99,10 +99,11 @@
 #define MAX_HWECC_BYTES_OOB_64     24
 #define JFFS2_CLEAN_MARKER_OFFSET  0x2
 
-#define BCH_ECC_POS			0x2
+//#define BCH_ECC_POS			0x2
+#define BADBLOCK_MARKER_LENGTH				0x2
 #define BCH_JFFS2_CLEAN_MARKER_OFFSET	0x3a
 #define OMAP_BCH8_ECC_SECT_BYTES	14
-
+#define LOG() printk("[mDBG]%s:[%s][%d]\n", __FUNCTION__, __FILE__, __LINE__)
 /* oob info generated runtime depending on ecc algorithm and layout selected */
 static struct nand_ecclayout omap_oobinfo;
 /* Define some generic bad / good block scan pattern which are used
@@ -882,15 +883,18 @@ static int omap_correct_data(struct mtd_info *mtd, u_char *dat,
 {
 	struct omap_nand_info *info = container_of(mtd, struct omap_nand_info,
 							mtd);
+	struct nand_chip *chip = mtd->priv;
+	int eccsize = chip->ecc.size;
+	int eccbytes = chip->ecc.bytes;
+	
 	int blockCnt = 0, i = 0, ret = 0;
 	int stat = 0;
-	int j, eccsize, eccflag, count;
-	unsigned int err_loc[8];
+	int j, eccflag, count;
+	unsigned int err_loc[16];
 
 	/* Ex NAND_ECC_HW12_2048 */
-	if ((info->nand.ecc.mode == NAND_ECC_HW) &&
-			(info->nand.ecc.size  == 2048))
-		blockCnt = 4;
+	if (info->nand.ecc.mode == NAND_ECC_HW)
+		blockCnt =  eccsize / 512;
 	else
 		blockCnt = 1;
 
@@ -911,20 +915,29 @@ static int omap_correct_data(struct mtd_info *mtd, u_char *dat,
 			dat      += 512;
 		}
 		break;
+	
+	
+	
 	case OMAP_ECC_BCH8_CODE_HW:
-		eccsize = BCH8_ECC_OOB_BYTES;
-
+		eccsize = 512;
+		/* 14th byte of ECC_BCH8 is padded with 0x0 for */
+		/* compatibility with ROM-code */
+		/* Actual ECC_BCH8 syndrome length is 13 bytes */
+		eccbytes = 13;
+		
 		for (i = 0; i < blockCnt; i++) {
 			eccflag = 0;
 			/* check if area is flashed */
-			for (j = 0; (j < eccsize) && (eccflag == 0); j++)
+			//for (j = 0; (j < eccsize) && (eccflag == 0); j++)
+			for (j = 0; (j < eccbytes) && (eccflag == 0); j++)
 				if (read_ecc[j] != 0xFF)
 					eccflag = 1;
 
 			if (eccflag == 1) {
 				eccflag = 0;
 				/* check if any ecc error */
-				for (j = 0; (j < eccsize) && (eccflag == 0);
+				//for (j = 0; (j < eccsize) && (eccflag == 0);
+				for (j = 0; (j < eccbytes) && (eccflag == 0);
 						j++)
 					if (calc_ecc[j] != 0)
 						eccflag = 1;
@@ -932,26 +945,39 @@ static int omap_correct_data(struct mtd_info *mtd, u_char *dat,
 
 			count = 0;
 			if (eccflag == 1)
-				count  = omap_elm_decode_bch_error(0, calc_ecc,
-						err_loc);
-
+				//count  = omap_elm_decode_bch_error(0, calc_ecc,
+						//err_loc);
+				count  = omap_elm_decode_bch_error(0x1,
+						calc_ecc, err_loc);
 			for (j = 0; j < count; j++) {
 				u32 bit_pos, byte_pos;
-
 				bit_pos   = err_loc[j] % 8;
-				byte_pos  = (BCH8_ECC_MAX - err_loc[j] - 1) / 8;
-				if (err_loc[j] < BCH8_ECC_MAX)
-					dat[byte_pos] ^=
+				byte_pos  = (eccsize + eccbytes - 1) -
+						(err_loc[j] / 8);
+				/*
+				 * Check bit flip error reported in data
+				 * area, if yes correct bit flip, else
+				 * bit flip in OOB area.
+				 */
+				if (byte_pos < eccsize)
+					dat[byte_pos] ^= 1 << bit_pos;
+				else if (byte_pos < (eccsize + eccbytes))
+					read_ecc[byte_pos - eccsize] ^=
 							1 << bit_pos;
-				/* else, not interested to correct ecc */
+				else
+					return -EBADMSG;
 			}
 
 			stat     += count;
-			calc_ecc  = calc_ecc + OMAP_BCH8_ECC_SECT_BYTES;
-			read_ecc  = read_ecc + OMAP_BCH8_ECC_SECT_BYTES;
-			dat      += BCH8_ECC_BYTES;
+			calc_ecc += (eccbytes + 1);
+			read_ecc += (eccbytes + 1);
+			dat      += eccsize;
 		}
 		break;
+		
+		/* ECC scheme not supported */
+	default:
+		return -EINVAL;
 	}
 	return stat;
 }
@@ -1240,24 +1266,30 @@ static int __devinit omap_nand_probe(struct platform_device *pdev)
 		if (info->mtd.oobsize == 64)
 			omap_oobinfo.eccbytes = info->nand.ecc.bytes *
 						2048/info->nand.ecc.size;
+		else if (info->mtd.oobsize == 224)
+			omap_oobinfo.eccbytes = info->nand.ecc.bytes *
+						4096/info->nand.ecc.size;
 		else
 			omap_oobinfo.eccbytes = info->nand.ecc.bytes;
+			
+		printk(KERN_ERR "FUNC:%s(), eccbytes = %d\n", __func__, omap_oobinfo.eccbytes);
 
 		if (pdata->ecc_opt == OMAP_ECC_HAMMING_CODE_HW_ROMCODE) {
 			omap_oobinfo.oobfree->offset =
 						offset + omap_oobinfo.eccbytes;
 			omap_oobinfo.oobfree->length = info->mtd.oobsize -
 				(offset + omap_oobinfo.eccbytes);
-		} else if (pdata->ecc_opt == OMAP_ECC_BCH8_CODE_HW) {
-			offset = BCH_ECC_POS; /* Synchronize with U-boot */
+		} else if (pdata->ecc_opt == OMAP_ECC_BCH8_CODE_HW) {LOG();
+			offset = BADBLOCK_MARKER_LENGTH;
 			omap_oobinfo.oobfree->offset =
-				BCH_JFFS2_CLEAN_MARKER_OFFSET;
+				offset + omap_oobinfo.eccbytes;
 			omap_oobinfo.oobfree->length = info->mtd.oobsize -
-						offset - omap_oobinfo.eccbytes;
+				offset - omap_oobinfo.eccbytes;
 		} else {
-			omap_oobinfo.oobfree->offset = offset;
+			//omap_oobinfo.oobfree->offset = offset;
+			omap_oobinfo.oobfree->offset = BADBLOCK_MARKER_LENGTH;
 			omap_oobinfo.oobfree->length = info->mtd.oobsize -
-						offset - omap_oobinfo.eccbytes;
+						BADBLOCK_MARKER_LENGTH - omap_oobinfo.eccbytes;
 			/*
 			offset is calculated considering the following :
 			1) 12 bytes ECC for 512 byte access and 24 bytes ECC for
@@ -1273,13 +1305,13 @@ static int __devinit omap_nand_probe(struct platform_device *pdev)
 
 		info->nand.ecc.layout = &omap_oobinfo;
 	}
-
+LOG();
 	/* second phase scan */
 	if (nand_scan_tail(&info->mtd)) {
 		err = -ENXIO;
 		goto out_release_mem_region;
 	}
-
+LOG();
 	mtd_device_parse_register(&info->mtd, NULL, 0,
 			pdata->parts, pdata->nr_parts);
 
