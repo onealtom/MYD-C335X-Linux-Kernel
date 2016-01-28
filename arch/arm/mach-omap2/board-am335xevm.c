@@ -43,7 +43,7 @@
 #include <linux/reboot.h>
 #include <linux/pwm/pwm.h>
 #include <linux/opp.h>
-
+#include <linux/spi/sc16is7x2.h>
 /* LCD controller is similar to DA850 */
 #include <video/da8xx-fb.h>
 
@@ -636,19 +636,6 @@ static struct pinmux_config uart1_pin_mux[] = {
         {"uart1_txd.uart1_txd", OMAP_MUX_MODE0 | AM33XX_PULL_ENBL},
         {NULL, 0},
 };
-/* Module pin mux for uart2 */
-static struct pinmux_config uart2_pin_mux[] = {
-        {"mii1_crs.uart2_rxd", OMAP_MUX_MODE6 | AM33XX_PIN_INPUT_PULLUP},
-        {"mii1_rxerr.uart2_txd", OMAP_MUX_MODE6 | AM33XX_PULL_ENBL},
-        {NULL, 0},
-};
-
-/* Module pin mux for uart3 */
-static struct pinmux_config uart3_pin_mux[] = {
-        {"spi0_cs1.uart3_rxd", OMAP_MUX_MODE1 | AM33XX_PIN_INPUT_PULLUP},
-        {"ecap0_in_pwm0_out.uart3_txd", OMAP_MUX_MODE1 | AM33XX_PULL_ENBL},
-        {NULL, 0},
-};
 
 /* Module pin mux for uart4 */
 static struct pinmux_config uart4_pin_mux[] = {
@@ -657,6 +644,20 @@ static struct pinmux_config uart4_pin_mux[] = {
         {NULL, 0},
 };
 
+static struct pinmux_config spi_pin_mux[] = {
+	{"mii1_col.spi1_sclk", OMAP_MUX_MODE2 | AM33XX_PULL_ENBL | AM33XX_INPUT_EN },
+	{"mii1_crs.spi1_d0",     OMAP_MUX_MODE2 | AM33XX_PULL_ENBL | AM33XX_PULL_UP | AM33XX_INPUT_EN},
+	{"mii1_rxerr.spi1_d1",    OMAP_MUX_MODE2 | AM33XX_PULL_ENBL | AM33XX_INPUT_EN},
+
+	{"rmii1_refclk.spi1_cs0", OMAP_MUX_MODE2 | AM33XX_PULL_ENBL | AM33XX_PULL_UP | AM33XX_INPUT_EN},
+	{"ecap0_in_pwm0_out.spi1_cs1", OMAP_MUX_MODE2 | AM33XX_PULL_ENBL | AM33XX_PULL_UP | AM33XX_INPUT_EN},	
+
+	{"gpmc_csn3.gpio2_0",      OMAP_MUX_MODE7 | AM33XX_PULL_UP   | AM33XX_INPUT_EN}, /* irq */
+	{"gpmc_clk.gpio2_1",    OMAP_MUX_MODE7 | AM33XX_PULL_UP   | AM33XX_INPUT_EN}, /* irq */	
+
+
+	{NULL, 0},
+};
 
 #define AM335XEVM_WLAN_PMENA_GPIO	GPIO_TO_PIN(1, 30)
 #define AM335XEVM_WLAN_IRQ_GPIO		GPIO_TO_PIN(3, 17)
@@ -984,25 +985,86 @@ static void mcasp0_init(int evm_id, int profile)
 	return;
 }
 
+static const char *spi1_cs0_gpio_names[SC16IS7X2_NR_GPIOS] = {
+	"spi-gpio200",
+	"spi-gpio201",
+	"spi-gpio202",
+	"spi-gpio203",
+	"spi-gpio204",
+	"spi-gpio205",
+	"spi-gpio206",
+	"spi-gpio207",
+};
+
+static const char *spi1_cs1_gpio_names[SC16IS7X2_NR_GPIOS] = {
+	"spi-gpio208",
+	"spi-gpio209",
+	"spi-gpio2010",
+	"spi-gpio2011",
+	"spi-gpio2012",
+	"spi-gpio2013",
+	"spi-gpio2014",
+	"spi-gpio2015",
+};
+
+static struct sc16is7x2_platform_data spi1_cs0_uart_gpio_data = {
+	.uartclk        = 11059200,/* crystal freq of sc16is7x2*/
+	.uart_base      = 0,
+	.gpio_base      = SC16IS7X2_GPIO_BASE,
+	.label          = NULL,
+	.names          = spi1_cs0_gpio_names,
+};
+
+static struct sc16is7x2_platform_data spi1_cs1_uart_gpio_data = {
+	.uartclk        = 11059200,/* crystal freq of sc16is7x2*/
+	.uart_base      = 2,
+	.gpio_base      = SC16IS7X2_GPIO_BASE + 8,
+	.label          = NULL,
+	.names          = spi1_cs1_gpio_names,
+};
+
+/* Spi slave device, JBO */
+static struct spi_board_info am335x_spi_slave_info[] = {
+	{
+		.modalias       = "sc16is7x2",
+		.chip_select    = 0,
+		.max_speed_hz   = 11059200,
+		.bus_num        = 2,
+		.mode           = SPI_MODE_0,
+		.platform_data  = &spi1_cs0_uart_gpio_data,
+		.irq            = OMAP_GPIO_IRQ(GPIO_TO_PIN(2, 1)),
+	},
+	{
+		.modalias       = "sc16is7x2",
+		.chip_select    = 1,
+		.max_speed_hz   = 11059200,
+		.bus_num        = 2,
+		.mode           = SPI_MODE_0,
+		.platform_data  = &spi1_cs1_uart_gpio_data,
+		.irq            = OMAP_GPIO_IRQ(GPIO_TO_PIN(2, 0)),
+	},/*
+	{
+		.modalias      = "spidev",
+		.max_speed_hz  = 1000000,
+		.bus_num       = 2,
+		.chip_select   = 0,
+	},*/
+};
+
+static void spi_init(int evm_id, int profile)
+{
+	/* Configure SPI */
+	setup_pin_mux(spi_pin_mux);
+	spi_register_board_info(am335x_spi_slave_info,
+							ARRAY_SIZE(am335x_spi_slave_info));
+	
+	return;
+}
 
 static void uart1_init(int evm_id, int profile)
 {
         /* Configure Uart1*/
         setup_pin_mux(uart1_pin_mux);
-}
-
-static void uart2_init(int evm_id, int profile)
-{
-        /* Configure Uart2*/
-        setup_pin_mux(uart2_pin_mux);
-        return;
-}
-
-static void uart3_init(int evm_id, int profile)
-{
-        /* Configure Uart3*/
-        setup_pin_mux(uart3_pin_mux);
-        return;
 }
 
 static void uart4_init(int evm_id, int profile)
@@ -1123,11 +1185,10 @@ static struct evm_dev_cfg myd_am335x_dev_cfg[] = {
 	//{tsc_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{mfd_tscadc_init, DEV_ON_BASEBOARD, PROFILE_ALL},
 	{mcasp0_init,   DEV_ON_BASEBOARD, PROFILE_ALL},
+	{spi_init,      DEV_ON_BASEBOARD, PROFILE_ALL},
 	{usb0_init,     DEV_ON_BASEBOARD, PROFILE_ALL},
 	{usb1_init,     DEV_ON_BASEBOARD, PROFILE_ALL},	
 	{uart1_init, 	DEV_ON_BASEBOARD, PROFILE_ALL},
-	{uart2_init,    DEV_ON_BASEBOARD, PROFILE_ALL},
-	{uart3_init,    DEV_ON_BASEBOARD, PROFILE_ALL},
 	{uart4_init,    DEV_ON_BASEBOARD, PROFILE_ALL},
 	//{d_can_init,    DEV_ON_BASEBOARD, PROFILE_ALL},
 	//{gpio_keys_init,  DEV_ON_BASEBOARD, PROFILE_ALL},

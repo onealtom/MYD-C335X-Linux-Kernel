@@ -48,7 +48,7 @@
 #define PORT_TEGRA	20	/* NVIDIA Tegra internal UART */
 #define PORT_XR17D15X	21	/* Exar XR17D15x UART */
 #define PORT_MAX_8250	21	/* max port ID */
-
+#define PORT_SC16IS7X2  22
 /*
  * ARM specific type numbers.  These are not currently guaranteed
  * to be implemented, and will change in the future.  These are
@@ -206,6 +206,7 @@
 
 /* Xilinx PSS UART */
 #define PORT_XUARTPS	98
+
 
 #ifdef __KERNEL__
 

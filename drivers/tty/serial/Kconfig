@@ -276,6 +276,15 @@ config SERIAL_8250_DW
 
 comment "Non-8250 serial port support"
 
+config SERIAL_SC16IS7X2
+    tristate "SC16IS7x2 chips"
+#    depends on CONFIG_I2C && CONFIG_I2C_OMAP && GPIOLIB
+    select SERIAL_CORE
+    help
+      Selecting this option will add support for SC16IS7x2 i2c UARTs.
+      The GPIOs are exported via gpiolib interface.
+      If unsure, say N.
+      
 config SERIAL_AMBA_PL010
 	tristate "ARM AMBA PL010 serial port support"
 	depends on ARM_AMBA && (BROKEN || !ARCH_VERSATILE)
