@@ -986,25 +986,25 @@ static void mcasp0_init(int evm_id, int profile)
 }
 
 static const char *spi1_cs0_gpio_names[SC16IS7X2_NR_GPIOS] = {
-	"spi-gpio200",
-	"spi-gpio201",
-	"spi-gpio202",
-	"spi-gpio203",
-	"spi-gpio204",
-	"spi-gpio205",
-	"spi-gpio206",
-	"spi-gpio207",
+	"BLE_EN",//200
+	"BUZZER",//201
+	"BAT_EN",//202
+	"BLE_nRST",//203
+	"di2",//204
+	"di3",//205
+	"di4",//206
+	"di5",//207
 };
 
 static const char *spi1_cs1_gpio_names[SC16IS7X2_NR_GPIOS] = {
-	"spi-gpio208",
-	"spi-gpio209",
-	"spi-gpio2010",
-	"spi-gpio2011",
-	"spi-gpio2012",
-	"spi-gpio2013",
-	"spi-gpio2014",
-	"spi-gpio2015",
+	"do0",//208
+	"do1",//209
+	"do2",//210
+	"do3",//211
+	"do4",//212
+	"do5",//213
+	"di0",//214
+	"di1",//215
 };
 
 static struct sc16is7x2_platform_data spi1_cs0_uart_gpio_data = {
@@ -1134,9 +1134,9 @@ static void gpio_keys_init(int evm_id, int profile)
 
 static struct gpio_led gpio_leds[] = {
         {
-                .name                   = "sys_led",
-                .default_trigger        = "heartbeat",
-                .gpio                   = GPIO_TO_PIN(3, 18),
+			.name                   = "sys_led",
+			.default_trigger        = "heartbeat",
+			.gpio                   = GPIO_TO_PIN(3, 18),
 		.active_low             = 1,
         },{
                 .name                   = "user_led0",
