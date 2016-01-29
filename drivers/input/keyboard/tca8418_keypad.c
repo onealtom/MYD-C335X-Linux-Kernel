@@ -240,7 +240,6 @@ static irqreturn_t tca8418_irq_handler(int irq, void *dev_id)
 	u8 reg;
 	int error;
 
-	LOG();
 	error = tca8418_read_byte(keypad_data, REG_INT_STAT, &reg);
 	if (error) {
 		dev_err(&keypad_data->client->dev,
@@ -618,10 +617,8 @@ static int __devinit tca8418_keypad_probe(struct i2c_client *client,
 	}
 
 	error = request_threaded_irq(client->irq, NULL, tca8418_irq_handler,
-				     IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
+				     IRQF_TRIGGER_FALLING ,
 				     client->name, keypad_data);
-
-	irq_set_irq_type(client->irq, IRQ_TYPE_LEVEL_LOW);
 
 	if (error) {
 		dev_dbg(&client->dev,

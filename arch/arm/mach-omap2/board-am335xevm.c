@@ -532,6 +532,11 @@ static struct pinmux_config mmc0_cd_only_pin_mux[] = {
 	{NULL, 0},
 };
 
+static struct pinmux_config tca8418_keypad_irq_pin_mux[] = {
+	{"mcasp0_ahclkx.gpio3_21",  OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP},
+	{NULL, 0},
+};
+
 static struct pinmux_config d_can_pin_mux[] = {
 	{"uart0_ctsn.d_can1_tx", OMAP_MUX_MODE2 | AM33XX_PULL_ENBL},
 	{"uart0_rtsn.d_can1_rx", OMAP_MUX_MODE2 | AM33XX_PIN_INPUT_PULLUP},
@@ -1127,10 +1132,18 @@ static void gpio_keys_init(int evm_id, int profile)
 	int err;
 
 	setup_pin_mux(gpio_keys_pin_mux);
+	setup_pin_mux(tca8418_keypad_irq_pin_mux);
+
+	gpio_request(GPIO_TO_PIN(3, 21), "keypad_irq");
+    gpio_direction_output(GPIO_TO_PIN(3, 21), 1);
+    gpio_export(GPIO_TO_PIN(3, 21), 0); 
+    
 	err = platform_device_register(&gpio_keys);
+
 	if (err)
 		pr_err("failed to register gpio key device\n");
 }
+
 
 static struct gpio_led gpio_leds[] = {
         {
@@ -1474,7 +1487,8 @@ static struct i2c_board_info __initdata am335x_i2c0_boardinfo[] = {
 	},
 	{
 		I2C_BOARD_INFO("tca8418_keypad", 0x34),
-		.irq = 7,
+		/*.irq = 7,*/
+		.irq = OMAP_GPIO_IRQ(GPIO_TO_PIN(3, 21)),
 		.platform_data =  (void *)&am335x_tca8418_info,
 	},
 };
