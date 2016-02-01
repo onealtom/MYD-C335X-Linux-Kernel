@@ -105,7 +105,7 @@ static int __init lcd_type_init(char* s) {
 }
 __setup("dispmode=", lcd_type_init);
 
-static char* display_mode = "hdmi480p";
+static char* display_mode = "lcd7i";
 module_param(display_mode, charp, S_IRUGO);
 
 #define NUM_OF_LCDMODE 13
@@ -537,7 +537,13 @@ static struct pinmux_config tca8418_keypad_irq_pin_mux[] = {
 	{NULL, 0},
 };
 
-static struct pinmux_config d_can_pin_mux[] = {
+static struct pinmux_config d_can0_pin_mux[] = {
+	{"uart1_ctsn.d_can0_tx", OMAP_MUX_MODE2 | AM33XX_PULL_ENBL},
+	{"uart1_rtsn.d_can0_rx", OMAP_MUX_MODE2 | AM33XX_PIN_INPUT_PULLUP},
+        {NULL, 0},
+};
+
+static struct pinmux_config d_can1_pin_mux[] = {
 	{"uart0_ctsn.d_can1_tx", OMAP_MUX_MODE2 | AM33XX_PULL_ENBL},
 	{"uart0_rtsn.d_can1_rx", OMAP_MUX_MODE2 | AM33XX_PIN_INPUT_PULLUP},
         {NULL, 0},
@@ -634,6 +640,12 @@ static struct pinmux_config ehrpwm0_pin_mux[] = {
 		{"spi0_sclk.ehrpwm0A", OMAP_MUX_MODE3 | AM33XX_PIN_OUTPUT},
 			{NULL, 0},
 };
+
+
+static struct pinmux_config lcd_backlight_pin_mux[] = {
+	{"mcasp0_ahclkr.gpio3_17", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT_PULLUP },
+	{NULL, 0},
+ };
 
 /* Module pin mux for uart1 */
 static struct pinmux_config uart1_pin_mux[] = {
@@ -1082,8 +1094,10 @@ static void uart4_init(int evm_id, int profile)
 
 static void d_can_init(int evm_id, int profile)
 {
-	setup_pin_mux(d_can_pin_mux);
-	/* Instance Zero */
+	setup_pin_mux(d_can0_pin_mux);
+	setup_pin_mux(d_can1_pin_mux);
+
+	am33xx_d_can_init(0);
 	am33xx_d_can_init(1);
 }
 
@@ -1129,7 +1143,7 @@ static struct platform_device gpio_keys = {
 
 static void gpio_keys_init(int evm_id, int profile)
 {
-	int err;
+/*	int err;
 
 	setup_pin_mux(gpio_keys_pin_mux);
 	setup_pin_mux(tca8418_keypad_irq_pin_mux);
@@ -1141,7 +1155,11 @@ static void gpio_keys_init(int evm_id, int profile)
 	err = platform_device_register(&gpio_keys);
 
 	if (err)
-		pr_err("failed to register gpio key device\n");
+		pr_err("failed to register gpio key device\n");*/
+
+	setup_pin_mux(lcd_backlight_pin_mux);
+	gpio_request_one(GPIO_TO_PIN(3, 17), GPIOF_OUT_INIT_HIGH, "backlight");
+
 }
 
 
@@ -1194,7 +1212,7 @@ static struct evm_dev_cfg myd_am335x_dev_cfg[] = {
 	{rgmii1_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{rgmii2_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{display_init,     DEV_ON_BASEBOARD, PROFILE_ALL},
-	{enable_ehrpwm0,	DEV_ON_BASEBOARD, PROFILE_ALL},
+	//{enable_ehrpwm0,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	//{tsc_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{mfd_tscadc_init, DEV_ON_BASEBOARD, PROFILE_ALL},
 	{mcasp0_init,   DEV_ON_BASEBOARD, PROFILE_ALL},
@@ -1202,9 +1220,8 @@ static struct evm_dev_cfg myd_am335x_dev_cfg[] = {
 	{usb0_init,     DEV_ON_BASEBOARD, PROFILE_ALL},
 	{usb1_init,     DEV_ON_BASEBOARD, PROFILE_ALL},	
 	{uart1_init, 	DEV_ON_BASEBOARD, PROFILE_ALL},
-	{uart4_init,    DEV_ON_BASEBOARD, PROFILE_ALL},
-	//{d_can_init,    DEV_ON_BASEBOARD, PROFILE_ALL},
-	//{gpio_keys_init,  DEV_ON_BASEBOARD, PROFILE_ALL},
+	{d_can_init,    DEV_ON_BASEBOARD, PROFILE_ALL},
+	{gpio_keys_init,  DEV_ON_BASEBOARD, PROFILE_ALL},
 	{gpio_led_init,  DEV_ON_BASEBOARD, PROFILE_ALL},
 	{NULL, 0, 0},
 };
@@ -1500,7 +1517,7 @@ static struct omap_musb_board_data musb_board_data = {
 	 * mode[4:7] = USB1PORT's mode
 	 * AM335X beta EVM has USB0 in OTG mode and USB1 in host mode.
 	 */
-	.mode           = (MUSB_HOST << 4) | MUSB_OTG,
+	.mode           = (MUSB_HOST << 4) | MUSB_HOST,
 	.power		= 500,
 	.instances	= 1,
 };
