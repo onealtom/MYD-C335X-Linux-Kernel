@@ -29,6 +29,7 @@
 #include <linux/pm.h>
 #include <linux/bitops.h>
 #include <linux/debugfs.h>
+/*#define DEBUG*/
 #include <linux/platform_device.h>
 #include <linux/ctype.h>
 #include <linux/slab.h>

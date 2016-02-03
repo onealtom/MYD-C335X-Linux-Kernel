@@ -253,7 +253,7 @@ static struct mfd_tscadc_board tscadc = {
 };
 
 static u8 am335x_iis_serializer_direction0[] = {
-	INACTIVE_MODE,	TX_MODE,		RX_MODE,		INACTIVE_MODE,
+	RX_MODE,		TX_MODE,		INACTIVE_MODE,	INACTIVE_MODE,
 	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,
 	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,
 	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,
@@ -508,11 +508,10 @@ static struct pinmux_config i2c1_pin_mux[] = {
 static struct pinmux_config mcasp0_pin_mux[] = {
         {"mcasp0_aclkx.mcasp0_aclkx", OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLDOWN},
         {"mcasp0_fsx.mcasp0_fsx", OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLDOWN},
-	{"mcasp0_ahclkr.mcasp0_axr2", OMAP_MUX_MODE2 | AM33XX_PIN_INPUT_PULLDOWN},
+        {"mcasp0_axr0.mcasp0_axr0", OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLDOWN},
         {"mcasp0_axr1.mcasp0_axr1", OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLDOWN},
         {NULL, 0},
 };
-
 
 /* Module pin mux for mmc0 */
 static struct pinmux_config mmc0_common_pin_mux[] = {
@@ -957,40 +956,6 @@ static void evm_nand_init(int evm_id, int profile)
 	omap_init_gpmc(gpmc_device, sizeof(gpmc_device));
 	omap_init_elm();
 }
-
-/* ft5x0x platform data */
-static struct ft5x0x_ts_platform_data ts_plat_data = {
-	.irq            = -1,
-	.polling_mode   = 1,
-	.multi_touch    = 0,
-};
-
-/* gslx680 platform data */
-static struct gslx680_platform_data gslx680_plat_data = {
-	.irq            = 0,
-	.irq_port       = 0,
-	.wake           = GPIO_TO_PIN(3, 20),
-	.multi_touch    = 0,
-	.polling_mode   = 1,
-};
-
-static struct i2c_board_info am335x_i2c1_boardinfo[] = {
-	{
-		I2C_BOARD_INFO("sgtl5000", 0x0A),
-	},
-	{
-		I2C_BOARD_INFO("tda998x", 0x70),
-	},
-	{
-		I2C_BOARD_INFO("ft5x06_ts", 0x38),
-		.platform_data = &ts_plat_data,
-	},
-	{
-		I2C_BOARD_INFO("gslX680", 0x40),
-		.platform_data = &gslx680_plat_data,
-	},
-};
-
 
 /* Setup McASP 0 */
 static void mcasp0_init(int evm_id, int profile)
@@ -1487,17 +1452,14 @@ static struct tca8418_keypad_platform_data am335x_tca8418_info = {
 
 };
 
-static struct i2c_board_info __initdata am335x_i2c0_boardinfo[] = {
-	{
+// static struct i2c_board_info __initdata am335x_i2c0_boardinfo[] = {
+static struct i2c_board_info am335x_i2c0_boardinfo[] = {
+/*	{
 		I2C_BOARD_INFO("tps65217", TPS65217_I2C_ID),
 		.platform_data  = &myir_tps65217_info,
-	},
+	},*/
 	{
 		I2C_BOARD_INFO("sgtl5000", 0x0A),
-	},
-	{
-		I2C_BOARD_INFO("at24", 0x50),
-		.platform_data = &board_eeprom,
 	},
 	{
 		I2C_BOARD_INFO("rx8025t", 0x32),
@@ -1508,6 +1470,26 @@ static struct i2c_board_info __initdata am335x_i2c0_boardinfo[] = {
 		.irq = OMAP_GPIO_IRQ(GPIO_TO_PIN(3, 21)),
 		.platform_data =  (void *)&am335x_tca8418_info,
 	},
+	{
+		I2C_BOARD_INFO("at24", 0x50),
+		.platform_data = &board_eeprom,
+	},
+};
+
+/* ft5x0x platform data */
+static struct ft5x0x_ts_platform_data ts_plat_data = {
+	.irq            = -1,
+	.polling_mode   = 1,
+	.multi_touch    = 0,
+};
+
+/* gslx680 platform data */
+static struct gslx680_platform_data gslx680_plat_data = {
+	.irq            = 0,
+	.irq_port       = 0,
+	.wake           = GPIO_TO_PIN(3, 20),
+	.multi_touch    = 0,
+	.polling_mode   = 1,
 };
 
 static struct omap_musb_board_data musb_board_data = {

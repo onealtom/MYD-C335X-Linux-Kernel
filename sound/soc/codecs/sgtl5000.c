@@ -820,7 +820,7 @@ static int sgtl5000_probe(struct snd_soc_codec *codec)
 {
 	int ret;
 
-	/*printk("--------sgtl5000_probe\n");*/
+	printk("--------sgtl5000_probe\n");
 
 	/* setup i2c data ops */
 	ret = snd_soc_codec_set_cache_io(codec, 16, 16, SND_SOC_I2C);
@@ -889,6 +889,8 @@ static __devinit int sgtl5000_i2c_probe(struct i2c_client *client,
 {
 	struct sgtl5000_priv *sgtl5000;
 	int ret;
+
+	printk("--------sgtl5000_i2c_probe\n");
 
 	sgtl5000 = kzalloc(sizeof(struct sgtl5000_priv), GFP_KERNEL);
 	if (!sgtl5000)
