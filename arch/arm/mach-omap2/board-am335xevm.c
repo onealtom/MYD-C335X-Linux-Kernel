@@ -105,7 +105,7 @@ static int __init lcd_type_init(char* s) {
 }
 __setup("dispmode=", lcd_type_init);
 
-static char* display_mode = "lcd7i";
+static char* display_mode = "lcd7ir";
 module_param(display_mode, charp, S_IRUGO);
 
 #define NUM_OF_LCDMODE 13
@@ -123,7 +123,7 @@ const char *display_num[]={ "lcd4i3" , "lcd7ir" , "lcd7ic", "lcd7ir-k",
 static const struct display_panel disp_panel = {
 	WVGA,
 	32,
-	16,
+	32,
 	COLOR_ACTIVE,
 };
 
@@ -139,7 +139,7 @@ static struct lcd_ctrl_config lcd_cfg = {
 	.ac_bias		= 255,
 	.ac_bias_intrpt		= 0,
 	.dma_burst_sz		= 16,
-	.bpp			= 16,
+	.bpp			= 32,
 	.fdd			= 0x80,
 	.tft_alt_mode		= 0,
 	.stn_565_mode		= 0,
@@ -413,6 +413,26 @@ static struct pinmux_config lcdc_pin_mux[] = {
 						       | AM33XX_PULL_DISA},
 	{"lcd_data15.lcd_data15",	OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
 						       | AM33XX_PULL_DISA},
+
+
+	{"lcd_data16.lcd_data16",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
+						       | AM33XX_PULL_DISA},
+	{"lcd_data17.lcd_data17",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
+						       | AM33XX_PULL_DISA},
+	{"lcd_data18.lcd_data18",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
+						       | AM33XX_PULL_DISA},
+	{"lcd_data19.lcd_data19",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
+						       | AM33XX_PULL_DISA},
+	{"lcd_data20.lcd_data20",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
+						       | AM33XX_PULL_DISA},
+	{"lcd_data21.lcd_data21",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
+						       | AM33XX_PULL_DISA},
+	{"lcd_data22.lcd_data22",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
+						       | AM33XX_PULL_DISA},
+	{"lcd_data23.lcd_data23",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
+						       | AM33XX_PULL_DISA},
+
+
 	{"lcd_vsync.lcd_vsync",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},
 	{"lcd_hsync.lcd_hsync",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},
 	{"lcd_pclk.lcd_pclk",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},
@@ -948,7 +968,7 @@ static void evm_nand_init(int evm_id, int profile)
 		&am335x_nand_timings);
 	if (!pdata)
 		return;
-//	pdata->ecc_opt =OMAP_ECC_BCH8_CODE_HW;
+	pdata->ecc_opt =OMAP_ECC_BCH8_CODE_HW;
 	pdata->elm_used = true;
 	gpmc_device[0].pdata = pdata;
 	gpmc_device[0].flag = GPMC_DEVICE_NAND;
